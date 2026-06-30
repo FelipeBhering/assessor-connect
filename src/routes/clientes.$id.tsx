@@ -53,7 +53,8 @@ const interactionIcons = {
 } as const;
 
 function ClientDetail() {
-  const { client } = Route.useLoaderData();
+  const { id } = Route.useParams();
+  const client = clients.find((c) => c.id === id)!;
   const history = interactions.filter((i) => i.clientId === client.id);
 
   const portfolioByCat = Object.entries(
