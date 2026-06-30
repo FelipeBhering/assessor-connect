@@ -1,11 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Users, KanbanSquare, Calendar, MoreHorizontal } from "lucide-react";
+import { LayoutDashboard, Users, ListTodo, Calendar, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/feed", label: "Feed", icon: ListTodo },
   { to: "/clientes", label: "Clientes", icon: Users },
-  { to: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { to: "/agenda", label: "Agenda", icon: Calendar },
   { to: "/configuracoes", label: "Mais", icon: MoreHorizontal },
 ];

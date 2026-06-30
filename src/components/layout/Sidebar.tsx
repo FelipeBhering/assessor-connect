@@ -1,9 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Users, KanbanSquare, Calendar, MessageSquare, Settings, TrendingUp } from "lucide-react";
+import { LayoutDashboard, Users, KanbanSquare, Calendar, MessageSquare, Settings, TrendingUp, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAlerts } from "@/modules/crm/hooks";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/feed", label: "Feed do Dia", icon: ListTodo },
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/pipeline", label: "Pipeline", icon: KanbanSquare },
   { to: "/agenda", label: "Agenda", icon: Calendar },
@@ -13,6 +15,8 @@ const nav = [
 
 export function Sidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { data: alerts } = useAlerts();
+  const alertCount = alerts?.length ?? 0;
   return (
     <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-sidebar text-sidebar-foreground flex-col z-30">
       <div className="px-6 py-6 flex items-center gap-2">
@@ -41,7 +45,12 @@ export function Sidebar() {
             >
               <Icon className="size-4" />
               {item.label}
-              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
+              {item.to === "/feed" && alertCount > 0 && (
+                <span className="ml-auto min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center px-1">
+                  {alertCount > 9 ? "9+" : alertCount}
+                </span>
+              )}
+              {active && item.to !== "/feed" && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />}
             </Link>
           );
         })}

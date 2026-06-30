@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PipelineRouteImport } from './routes/pipeline'
+import { Route as FeedRouteImport } from './routes/feed'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ComunicacaoRouteImport } from './routes/comunicacao'
 import { Route as ClientesRouteImport } from './routes/clientes'
@@ -21,6 +22,11 @@ import { Route as ClientesIdRouteImport } from './routes/clientes.$id'
 const PipelineRoute = PipelineRouteImport.update({
   id: '/pipeline',
   path: '/pipeline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedRoute = FeedRouteImport.update({
+  id: '/feed',
+  path: '/feed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/clientes': typeof ClientesRouteWithChildren
   '/comunicacao': typeof ComunicacaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/feed': typeof FeedRoute
   '/pipeline': typeof PipelineRoute
   '/clientes/$id': typeof ClientesIdRoute
   '/clientes/': typeof ClientesIndexRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/agenda': typeof AgendaRoute
   '/comunicacao': typeof ComunicacaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/feed': typeof FeedRoute
   '/pipeline': typeof PipelineRoute
   '/clientes/$id': typeof ClientesIdRoute
   '/clientes': typeof ClientesIndexRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/clientes': typeof ClientesRouteWithChildren
   '/comunicacao': typeof ComunicacaoRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/feed': typeof FeedRoute
   '/pipeline': typeof PipelineRoute
   '/clientes/$id': typeof ClientesIdRoute
   '/clientes/': typeof ClientesIndexRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/comunicacao'
     | '/configuracoes'
+    | '/feed'
     | '/pipeline'
     | '/clientes/$id'
     | '/clientes/'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/agenda'
     | '/comunicacao'
     | '/configuracoes'
+    | '/feed'
     | '/pipeline'
     | '/clientes/$id'
     | '/clientes'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/comunicacao'
     | '/configuracoes'
+    | '/feed'
     | '/pipeline'
     | '/clientes/$id'
     | '/clientes/'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   ClientesRoute: typeof ClientesRouteWithChildren
   ComunicacaoRoute: typeof ComunicacaoRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
+  FeedRoute: typeof FeedRoute
   PipelineRoute: typeof PipelineRoute
 }
 
@@ -137,6 +150,13 @@ declare module '@tanstack/react-router' {
       path: '/pipeline'
       fullPath: '/pipeline'
       preLoaderRoute: typeof PipelineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed': {
+      id: '/feed'
+      path: '/feed'
+      fullPath: '/feed'
+      preLoaderRoute: typeof FeedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/configuracoes': {
@@ -211,8 +231,19 @@ const rootRouteChildren: RootRouteChildren = {
   ClientesRoute: ClientesRouteWithChildren,
   ComunicacaoRoute: ComunicacaoRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
+  FeedRoute: FeedRoute,
   PipelineRoute: PipelineRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

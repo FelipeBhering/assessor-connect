@@ -8,11 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { ProfileBadge, ContactPill } from "@/components/ProfileBadge";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
-import { Search, Plus, LayoutGrid, List as ListIcon } from "lucide-react";
-import { clients, type RiskProfile, type Origin } from "@/lib/mock-data";
+import { Search, Plus, LayoutGrid, List as ListIcon, Loader2 } from "lucide-react";
+import type { RiskProfile, Origin } from "@/lib/mock-data";
 import { formatBRL, daysAgo, initials } from "@/lib/format";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useClients, useCreateClient } from "@/modules/crm/hooks";
 
 export const Route = createFileRoute("/clientes/")({
   head: () => ({
@@ -40,6 +41,23 @@ function ClientesPage() {
   const [bandIdx, setBandIdx] = useState<number | null>(null);
   const [view, setView] = useState<"grid" | "table">("table");
 
+  const { data: clientRows, isLoading, isError } = useClients();
+
+  const clients = useMemo(
+    () =>
+      (clientRows ?? []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        city: c.city ?? "",
+        aum: Number(c.aum),
+        profile: c.risk_profile as RiskProfile,
+        origin: (c.origin ?? "Site") as Origin,
+        lastContact: c.last_contact_at ?? c.created_at,
+        nextAction: c.next_action ?? "Sem próxima ação definida",
+      })),
+    [clientRows],
+  );
+
   const filtered = useMemo(() => {
     return clients.filter((c) => {
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -51,7 +69,7 @@ function ClientesPage() {
       }
       return true;
     });
-  }, [search, profileFilter, originFilter, bandIdx]);
+  }, [clients, search, profileFilter, originFilter, bandIdx]);
 
   const toggle = <T,>(arr: T[], set: (a: T[]) => void, v: T) =>
     set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
@@ -107,7 +125,19 @@ function ClientesPage() {
 
         <div className="text-xs text-muted-foreground">{filtered.length} cliente(s)</div>
 
-        {view === "table" ? (
+        {isLoading && (
+          <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Carregando clientes…
+          </div>
+        )}
+
+        {isError && (
+          <div className="text-center py-12 text-destructive">
+            Não foi possível carregar os clientes. Tente novamente.
+          </div>
+        )}
+
+        {!isLoading && !isError && view === "table" && (
           <Card className="shadow-card border-border/60 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -147,7 +177,9 @@ function ClientesPage() {
               </table>
             </div>
           </Card>
-        ) : (
+        )}
+
+        {!isLoading && !isError && view === "grid" && (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((c) => {
               const d = daysAgo(c.lastContact);
@@ -183,7 +215,7 @@ function ClientesPage() {
           </div>
         )}
 
-        {filtered.length === 0 && (
+        {!isLoading && !isError && filtered.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
             <Search className="mx-auto size-8 mb-2 opacity-40" />
             Nenhum cliente encontrado com esses filtros.
@@ -212,6 +244,9 @@ function Chip({ active, children, onClick }: { active: boolean; children: React.
 
 function NewClientSheet() {
   const [open, setOpen] = useState(false);
+  const [riskProfile, setRiskProfile] = useState<RiskProfile>("Moderado");
+  const createClient = useCreateClient();
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
@@ -228,31 +263,66 @@ function NewClientSheet() {
           className="px-4 pb-4 space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            setOpen(false);
-            toast.success("Cliente criado com sucesso");
+            const formData = new FormData(e.currentTarget);
+            const aumValue = Number(formData.get("aum") || 0);
+
+            createClient.mutate(
+              {
+                name: String(formData.get("name") || ""),
+                email: String(formData.get("email") || ""),
+                phone: String(formData.get("phone") || ""),
+                aum: aumValue,
+                riskProfile,
+                tags: [],
+              },
+              {
+                onSuccess: () => {
+                  setOpen(false);
+                  toast.success("Cliente criado com sucesso");
+                },
+                onError: (err) => {
+                  toast.error(err instanceof Error ? err.message : "Falha ao criar cliente");
+                },
+              },
+            );
           }}
         >
           <div className="space-y-1.5">
             <Label htmlFor="name">Nome completo</Label>
-            <Input id="name" placeholder="Ex: João da Silva" required />
+            <Input id="name" name="name" placeholder="Ex: João da Silva" required />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="joao@email.com" required />
+            <Input id="email" name="email" type="email" placeholder="joao@email.com" required />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="phone">Telefone</Label>
-            <Input id="phone" placeholder="+55 11 98000-0000" />
+            <Input id="phone" name="phone" placeholder="+55 11 98000-0000" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="aum">AUM estimado (R$)</Label>
-            <Input id="aum" type="number" placeholder="500000" />
+            <Input id="aum" name="aum" type="number" placeholder="500000" />
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="text-sm text-muted-foreground w-full">Perfil de risco</span>
-            {profiles.map((p) => <Badge key={p} variant="outline" className="cursor-pointer">{p}</Badge>)}
+            {profiles.map((p) => (
+              <Badge
+                key={p}
+                variant={riskProfile === p ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => setRiskProfile(p)}
+              >
+                {p}
+              </Badge>
+            ))}
           </div>
-          <Button type="submit" className="w-full bg-primary text-primary-foreground">Criar cliente</Button>
+          <Button
+            type="submit"
+            className="w-full bg-primary text-primary-foreground"
+            disabled={createClient.isPending}
+          >
+            {createClient.isPending ? "Criando…" : "Criar cliente"}
+          </Button>
         </form>
       </SheetContent>
     </Sheet>
